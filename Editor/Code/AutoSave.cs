@@ -11,7 +11,9 @@ namespace PM.Tools
 {
    public class AutoSave : EditorWindow
    {
-      private readonly GUIStyle _guiStyleLabel = new GUIStyle();
+      // Cached GUIStyle - initialized once
+      private GUIStyle _guiStyleLabel;
+      private bool _guiStyleInitialized;
 
       private const string LOGColor = "#CC0000";
       private const int LOGSize = 14;
@@ -33,6 +35,9 @@ namespace PM.Tools
       private static bool _backup;
       private static bool _showBackup;
 
+      // Race condition prevention
+      private static bool _isSaving;
+
       private static DateTime _lastAutosave = DateTime.Now;
 
       private static int _saveInterval = 5;
@@ -41,31 +46,70 @@ namespace PM.Tools
       private static string _backupPath;
       private static int _backupCount;
 
-      private Texture2D AsAsset => AssetDatabase.LoadAssetAtPath(Path + "asset.png", typeof(Texture2D)) as Texture2D;
-      private Texture2D AsDisable => AssetDatabase.LoadAssetAtPath(Path + "disable.png", typeof(Texture2D)) as Texture2D;
-      private Texture2D AsEnable => AssetDatabase.LoadAssetAtPath(Path + "enable.png", typeof(Texture2D)) as Texture2D;
-      private Texture2D AsInfo => AssetDatabase.LoadAssetAtPath(Path + "info.png", typeof(Texture2D)) as Texture2D;
-      private Texture2D AsOnOff => AssetDatabase.LoadAssetAtPath(Path + "onoff.png", typeof(Texture2D)) as Texture2D;
-      private Texture2D AsOnPlay => AssetDatabase.LoadAssetAtPath(Path + "play.png", typeof(Texture2D)) as Texture2D;
-      private Texture2D AsTime => AssetDatabase.LoadAssetAtPath(Path + "time.png", typeof(Texture2D)) as Texture2D;
-      private Texture2D AsBackup => AssetDatabase.LoadAssetAtPath(Path + "backup.png", typeof(Texture2D)) as Texture2D;
-      private Texture2D PmLogo => AssetDatabase.LoadAssetAtPath(Path + "logo.png", typeof(Texture2D)) as Texture2D;
+      // Cached textures - loaded once in OnEnable
+      private Texture2D _cachedAsset;
+      private Texture2D _cachedDisable;
+      private Texture2D _cachedEnable;
+      private Texture2D _cachedInfo;
+      private Texture2D _cachedOnOff;
+      private Texture2D _cachedOnPlay;
+      private Texture2D _cachedTime;
+      private Texture2D _cachedBackup;
+      private Texture2D _cachedLogo;
 
-      private static int BackupCount => EditorPrefs.GetInt(BackupCountKey);
+      // Cached texture path - calculated once
+      private string _cachedTexturePath;
 
-      private string Path
+      // Status indicator
+      private static string _lastSaveStatus = "";
+      private static double _statusDisplayTime;
+      private const double StatusDisplayDuration = 3.0;
+
+      private string TexturePath
       {
          get
          {
-            string path = AssetDatabase.GetAssetPath(MonoScript.FromScriptableObject(this));
-            path = path[..path.LastIndexOf('/')];
-            path = path[..(path.LastIndexOf('/') + 1)];
-            return path + "Textures/";
+            if (string.IsNullOrEmpty(_cachedTexturePath))
+            {
+               string path = AssetDatabase.GetAssetPath(MonoScript.FromScriptableObject(this));
+               path = path.Substring(0, path.LastIndexOf('/'));
+               path = path.Substring(0, path.LastIndexOf('/') + 1);
+               _cachedTexturePath = path + "Textures/";
+            }
+            return _cachedTexturePath;
          }
+      }
+
+      private void CacheTextures()
+      {
+         string path = TexturePath;
+         _cachedAsset = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "asset.png");
+         _cachedDisable = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "disable.png");
+         _cachedEnable = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "enable.png");
+         _cachedInfo = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "info.png");
+         _cachedOnOff = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "onoff.png");
+         _cachedOnPlay = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "play.png");
+         _cachedTime = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "time.png");
+         _cachedBackup = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "backup.png");
+         _cachedLogo = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "logo.png");
+      }
+
+      private void InitializeGUIStyle()
+      {
+         if (_guiStyleInitialized) return;
+
+         _guiStyleLabel = new GUIStyle
+         {
+            fontSize = 12,
+            fontStyle = FontStyle.Italic
+         };
+         _guiStyleLabel.normal.textColor = new Color(.58f, .58f, .58f);
+         _guiStyleInitialized = true;
       }
 
       private static void AutosaveOff()
       {
+         // Always unsubscribe first to prevent duplicates
          EditorApplication.update -= EditorUpdate;
          EditorApplication.playModeStateChanged -= OnEnterInPlayMode;
          _autoSave = false;
@@ -74,6 +118,10 @@ namespace PM.Tools
 
       private static void AutosaveOn()
       {
+         // Unsubscribe first to prevent duplicate registrations
+         EditorApplication.update -= EditorUpdate;
+         EditorApplication.playModeStateChanged -= OnEnterInPlayMode;
+
          _lastAutosave = DateTime.Now;
          EditorApplication.update += EditorUpdate;
          EditorApplication.playModeStateChanged += OnEnterInPlayMode;
@@ -85,6 +133,9 @@ namespace PM.Tools
       {
          if (_lastAutosave.AddMinutes(_saveInterval) > DateTime.Now) return;
 
+         // Always reset timer to prevent checking every frame
+         _lastAutosave = DateTime.Now;
+
          for (int i = 0; i < SceneManager.sceneCount; i++)
          {
             var scene = SceneManager.GetSceneAt(i);
@@ -92,7 +143,6 @@ namespace PM.Tools
             if (scene.isDirty)
             {
                Save();
-               _lastAutosave = DateTime.Now;
                break;
             }
          }
@@ -132,33 +182,57 @@ namespace PM.Tools
       [MenuItem("Tools/ProjectMakers/AutoSave")]
       private static void OpenWindow()
       {
-         Debug.Log($"Opening AutoSave window...");
          GetWindow<AutoSave>("AutoSave");
       }
 
       private static void Save()
       {
-         Scene activeScene = SceneManager.GetActiveScene();
-         SaveAllDirtyScenes();
+         // Prevent race condition - don't save if already saving
+         if (_isSaving) return;
+         _isSaving = true;
 
-         if (_saveAssets)
-            AssetDatabase.SaveAssets();
+         try
+         {
+            Scene activeScene = SceneManager.GetActiveScene();
+            bool saveSuccessful = SaveAllDirtyScenes();
 
-         Log(0, $"Scene '{activeScene.name}' has been saved.");
+            if (_saveAssets)
+               AssetDatabase.SaveAssets();
 
-         if (!_backup)
-            return;
+            if (saveSuccessful)
+            {
+               Log(0, $"Scene '{activeScene.name}' has been saved.");
+               _lastSaveStatus = $"Saved: {activeScene.name}";
+               _statusDisplayTime = EditorApplication.timeSinceStartup;
+            }
 
-         BackupActiveScene(activeScene);
+            if (!_backup)
+               return;
+
+            BackupActiveScene(activeScene);
+         }
+         finally
+         {
+            _isSaving = false;
+         }
       }
 
-      private static void SaveAllDirtyScenes()
+      private static bool SaveAllDirtyScenes()
       {
+         bool allSuccessful = true;
+
          for (int i = 0; i < SceneManager.sceneCount; i++)
          {
             var scene = SceneManager.GetSceneAt(i);
 
             if (!scene.isDirty) continue;
+
+            // Skip unsaved new scenes (no path) - they require user interaction
+            if (string.IsNullOrEmpty(scene.path))
+            {
+               Log(1, $"Scene '{scene.name}' has no path. Please save it manually first.");
+               continue;
+            }
 
             try
             {
@@ -167,17 +241,46 @@ namespace PM.Tools
             catch (Exception e)
             {
                Log(2, $"Error occurred while saving scene '{scene.name}'.\nException: {e}");
+               allSuccessful = false;
             }
          }
+
+         return allSuccessful;
+      }
+
+      private static bool ValidateBackupPath(string path)
+      {
+         // Prevent path traversal attacks
+         if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+         // Normalize and check for path traversal
+         string normalized = path.Replace('\\', '/');
+         if (normalized.Contains("..") ||
+             normalized.StartsWith("/") ||
+             normalized.Contains(":") ||
+             normalized.Contains("~"))
+         {
+            Log(1, "Invalid backup path: Path traversal or absolute paths not allowed.");
+            return false;
+         }
+
+         return true;
       }
 
       private static void BackupActiveScene(Scene activeScene)
       {
+         if (!ValidateBackupPath(_backupPath))
+         {
+            Log(2, "Backup skipped due to invalid backup path.");
+            return;
+         }
+
          var username = SystemInfo.deviceName;
          var curSceneName = activeScene.name;
          var fileName = BackupFileName(curSceneName);
-         var path = System.IO.Path.Combine("Assets/", _backupPath, username, curSceneName);
-         var filePath = System.IO.Path.Combine(path, fileName);
+         var path = Path.Combine("Assets", _backupPath, username, curSceneName);
+         var filePath = Path.Combine(path, fileName);
 
          if (!Directory.Exists(path))
             Directory.CreateDirectory(path);
@@ -186,7 +289,9 @@ namespace PM.Tools
          {
             EditorSceneManager.SaveScene(activeScene, filePath, true);
             Log(0, $"Backup created for scene '{curSceneName}'.");
-            ClearBackupFolder(path);
+
+            // Deferred cleanup to avoid blocking
+            EditorApplication.delayCall += () => ClearBackupFolder(path, filePath);
          }
          catch (Exception e)
          {
@@ -194,51 +299,79 @@ namespace PM.Tools
          }
       }
 
-      private static void ClearBackupFolder(string path)
+      private static void ClearBackupFolder(string path, string newFilePath)
       {
-         var fileInfo = new DirectoryInfo(path).GetFiles("*.unity");
-
-         if (fileInfo.Length > _backupCount)
+         try
          {
-            var oldestUnityFile = fileInfo.OrderBy(x => x.LastWriteTime).First();
-            var metaFilePath = $"{oldestUnityFile.FullName}.meta";
+            var fileInfo = new DirectoryInfo(path).GetFiles("*.unity");
 
-            oldestUnityFile.Delete();
+            if (fileInfo.Length > _backupCount)
+            {
+               // O(n) algorithm to find oldest file instead of O(n log n) sort
+               FileInfo oldestFile = null;
+               DateTime oldestTime = DateTime.MaxValue;
 
-            if (File.Exists(metaFilePath))
-               File.Delete(metaFilePath);
+               foreach (var file in fileInfo)
+               {
+                  if (file.LastWriteTime < oldestTime)
+                  {
+                     oldestTime = file.LastWriteTime;
+                     oldestFile = file;
+                  }
+               }
 
-            AssetDatabase.Refresh();
+               if (oldestFile != null)
+               {
+                  var metaFilePath = oldestFile.FullName + ".meta";
+
+                  oldestFile.Delete();
+
+                  if (File.Exists(metaFilePath))
+                     File.Delete(metaFilePath);
+               }
+            }
+
+            // Only refresh the specific backup folder, not entire project
+            if (!string.IsNullOrEmpty(newFilePath))
+            {
+               AssetDatabase.ImportAsset(newFilePath, ImportAssetOptions.ForceSynchronousImport);
+            }
+         }
+         catch (Exception e)
+         {
+            Log(1, $"Warning: Could not clean up old backups. {e.Message}");
          }
       }
 
       private static string BackupFileName(string curSceneName)
       {
          var timestamp = DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss_fff");
-         var filename = $"{curSceneName} v.{timestamp}.unity";
-         return filename;
+         return $"{curSceneName} v.{timestamp}.unity";
       }
 
       private static void Log(int type, string body)
       {
          if (!_debugLog) return;
 
+         string prefix = $"<color={LOGColor}><size={LOGSize}><b>PM - Autosave: </b></size></color>";
+
          switch (type)
          {
             case 1:
-               Debug.LogWarning($"<color={LOGColor}><size={LOGSize}><b>PM - Autosave: </b></size></color>{body}");
+               Debug.LogWarning(prefix + body);
                break;
             case 2:
-               Debug.LogError($"<color={LOGColor}><size={LOGSize}><b>PM - Autosave: </b></size></color>{body}");
+               Debug.LogError(prefix + body);
                break;
             default:
-               Debug.Log($"<color={LOGColor}><size={LOGSize}><b>PM - Autosave: </b></size></color>{body}");
+               Debug.Log(prefix + body);
                break;
          }
       }
 
       private void OnEnable()
       {
+         CacheTextures();
          LoadSettings();
 
          if (_autoSave)
@@ -247,8 +380,17 @@ namespace PM.Tools
             AutosaveOff();
       }
 
+      private void OnDisable()
+      {
+         // Don't remove event handlers here - AutoSave should continue running
+         // even when the window is closed. Handlers are static and managed by
+         // AutosaveOn()/AutosaveOff(). Removing them here would stop AutoSave
+         // unexpectedly when the user just closes the settings window.
+      }
+
       private void OnGUI()
       {
+         InitializeGUIStyle();
          EditorGUI.BeginChangeCheck();
 
          if (_saveInterval != _saveIntervalSlider)
@@ -260,16 +402,25 @@ namespace PM.Tools
          GUILayout.Space(20);
          GUILayout.BeginHorizontal();
          GUILayout.FlexibleSpace();
-         GUILayout.Label(PmLogo);
+         if (_cachedLogo != null)
+            GUILayout.Label(_cachedLogo);
          GUILayout.FlexibleSpace();
          GUILayout.EndHorizontal();
          GUILayout.Space(10);
          EditorGUILayout.LabelField(string.Empty, GUI.skin.horizontalSlider);
+
+         // Status indicator
+         if (!string.IsNullOrEmpty(_lastSaveStatus) &&
+             EditorApplication.timeSinceStartup - _statusDisplayTime < StatusDisplayDuration)
+         {
+            EditorGUILayout.HelpBox(_lastSaveStatus, MessageType.Info);
+         }
+
          GUILayout.Space(10);
          GUILayout.BeginHorizontal();
-         DrawButton(ref _debugLog, AsInfo, "Create Debug.Log", "Debug.Log");
-         DrawButton(ref _saveOnPlay, AsOnPlay, "Save on Play", "Save on Play");
-         DrawButton(ref _saveAssets, AsAsset, "Save Assets", "Save Assets");
+         DrawButton(ref _debugLog, _cachedInfo, "Toggle debug logging to console", "Debug.Log");
+         DrawButton(ref _saveOnPlay, _cachedOnPlay, "Automatically save before entering Play mode", "Save on Play");
+         DrawButton(ref _saveAssets, _cachedAsset, "Also save modified assets (ScriptableObjects, prefabs, etc.)", "Save Assets");
          GUILayout.FlexibleSpace();
          GUILayout.BeginVertical();
          GUILayout.BeginHorizontal();
@@ -283,14 +434,18 @@ namespace PM.Tools
 
          GUILayout.BeginVertical();
          GUILayout.Space(-4);
-         EditorGUILayout.LabelField(new GUIContent(AsTime, "Save interval in minutes"), GUILayout.MaxHeight(28), GUILayout.MaxWidth(28));
+         EditorGUILayout.LabelField(new GUIContent(_cachedTime, "Auto-save interval in minutes (1-30). Saves only when scenes have unsaved changes."), GUILayout.MaxHeight(28), GUILayout.MaxWidth(28));
          GUILayout.EndVertical();
          GUILayout.EndHorizontal();
          GUILayout.EndVertical();
-         DrawButton(ref _autoSave, AsOnOff, "AutoSave ON/OFF", "AutoSave");
+         DrawButton(ref _autoSave, _cachedOnOff, "Enable or disable automatic saving", "AutoSave");
          GUILayout.EndHorizontal();
          GUILayout.Space(10);
          GUILayout.BeginHorizontal();
+
+         // Save and restore GUI colors
+         Color originalTextColor = GUI.skin.button.normal.textColor;
+         Color originalBgColor = GUI.backgroundColor;
 
          GUI.skin.button.normal.textColor = Color.white;
          GUI.backgroundColor = new Color(0.63f, 0f, 0f);
@@ -301,23 +456,34 @@ namespace PM.Tools
          if (GUILayout.Button("Change backup settings...", EditorStyles.toolbarButton))
             _showBackup = !_showBackup;
 
-         GUI.skin.button.normal.textColor = Color.black;
-         GUI.backgroundColor = Color.white;
+         // Restore GUI colors
+         GUI.skin.button.normal.textColor = originalTextColor;
+         GUI.backgroundColor = originalBgColor;
+
          GUILayout.EndHorizontal();
 
          if (_showBackup)
          {
             GUILayout.BeginHorizontal();
-            DrawButton(ref _backup, AsBackup, "Save Project in backupfolder", "Backup");
+            DrawButton(ref _backup, _cachedBackup, "Create timestamped backup copies of scenes", "Backup");
             GUILayout.BeginVertical();
             GUILayout.Space(24);
             GUILayout.BeginHorizontal();
             GUILayout.Space(10);
 
-            Vector2 pathSize = GUI.skin.box.CalcSize(new GUIContent(_backupPath));
             EditorGUIUtility.labelWidth = 115;
+            string newBackupPath = EditorGUILayout.TextField(
+               new GUIContent("Backup save path:", "Relative path inside Assets/ folder (e.g., '_project/AutoSave')"),
+               _backupPath);
 
-            _backupPath = EditorGUILayout.TextField("Backup save path: ", _backupPath, GUILayout.MinWidth(EditorGUIUtility.labelWidth + pathSize.x + 15));
+            // Validate and update backup path
+            if (newBackupPath != _backupPath)
+            {
+               if (ValidateBackupPath(newBackupPath))
+               {
+                  _backupPath = newBackupPath;
+               }
+            }
 
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
@@ -326,9 +492,16 @@ namespace PM.Tools
             GUILayout.BeginHorizontal();
             GUILayout.Space(10);
 
-            Vector2 countSize = GUI.skin.box.CalcSize(new GUIContent(BackupCount.ToString()));
             EditorGUIUtility.labelWidth = 88;
-            EditorPrefs.SetInt(BackupCountKey, EditorGUILayout.IntField("Backup count: ", BackupCount, GUILayout.MinWidth(EditorGUIUtility.labelWidth + countSize.x + 8), GUILayout.MaxWidth(EditorGUIUtility.labelWidth + countSize.x + 8)));
+            int newBackupCount = EditorGUILayout.IntField(
+               new GUIContent("Backup count:", "Maximum number of backup files to keep per scene"),
+               _backupCount);
+
+            // Use field instead of direct EditorPrefs access
+            if (newBackupCount != _backupCount)
+            {
+               _backupCount = Mathf.Clamp(newBackupCount, 1, 100);
+            }
 
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
@@ -336,13 +509,10 @@ namespace PM.Tools
             GUILayout.EndHorizontal();
 
             GUILayout.Space(10);
-            GUILayout.Label("The backup directory is created in your project directory in \"Assets/your specified path\".", _guiStyleLabel);
+            GUILayout.Label("Backups are saved to: Assets/<your path>/<hostname>/<scene name>/", _guiStyleLabel);
          }
 
          GUILayout.Space(10);
-         _guiStyleLabel.fontSize = 12;
-         _guiStyleLabel.fontStyle = FontStyle.Italic;
-         _guiStyleLabel.normal.textColor = new Color(.58f, .58f, .58f);
 
          GUILayout.FlexibleSpace();
          GUILayout.BeginHorizontal();
@@ -356,19 +526,23 @@ namespace PM.Tools
             SaveSettings();
       }
 
-      private void DrawButton(ref bool buttonState, Texture buttonInfoText, string buttonText, string logMessage)
+      private void DrawButton(ref bool buttonState, Texture buttonInfoText, string buttonTooltip, string logMessage)
       {
          GUILayout.BeginVertical();
          GUILayout.BeginHorizontal();
          GUILayout.Space(10);
-         GUILayout.Label(buttonState ? AsEnable : AsDisable, GUILayout.MaxHeight(16), GUILayout.MaxWidth(16));
+         Texture2D stateTexture = buttonState ? _cachedEnable : _cachedDisable;
+         if (stateTexture != null)
+            GUILayout.Label(stateTexture, GUILayout.MaxHeight(16), GUILayout.MaxWidth(16));
+         else
+            GUILayout.Label(buttonState ? "ON" : "OFF", GUILayout.MaxHeight(16), GUILayout.MaxWidth(16));
          GUILayout.EndHorizontal();
 
-         if (GUILayout.Button(new GUIContent(buttonInfoText, buttonText), GUILayout.MaxHeight(28), GUILayout.MaxWidth(28)))
+         if (GUILayout.Button(new GUIContent(buttonInfoText, buttonTooltip), GUILayout.MaxHeight(28), GUILayout.MaxWidth(28)))
          {
             buttonState = !buttonState;
             Log(0, $"{logMessage} = {buttonState} !");
-            SaveSettings();
+            // SaveSettings() is called via EditorGUI.EndChangeCheck() in OnGUI()
          }
 
          GUILayout.EndVertical();
