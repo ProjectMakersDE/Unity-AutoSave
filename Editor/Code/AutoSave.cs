@@ -27,6 +27,7 @@ namespace PM.Tools
       private const string BackupKey = EditorPrefPrefix + "BACKUP";
       private const string BackupPathKey = EditorPrefPrefix + "BACKUPPATH";
       private const string BackupCountKey = EditorPrefPrefix + "BACKUPCOUNT";
+      private const string BackupPrefabKey = EditorPrefPrefix + "BACKUPPREFAB";
 
       private static bool _autoSave;
       private static bool _saveOnPlay;
@@ -34,6 +35,7 @@ namespace PM.Tools
       private static bool _debugLog;
       private static bool _backup;
       private static bool _showBackup;
+      private static bool _backupPrefab;
 
       // Race condition prevention
       private static bool _isSaving;
@@ -159,6 +161,7 @@ namespace PM.Tools
          _backup = EditorPrefs.GetBool(BackupKey, true);
          _backupPath = EditorPrefs.GetString(BackupPathKey, "_project/AutoSave");
          _backupCount = EditorPrefs.GetInt(BackupCountKey, 10);
+         _backupPrefab = EditorPrefs.GetBool(BackupPrefabKey, true);
       }
 
       private static void SaveSettings()
@@ -171,6 +174,7 @@ namespace PM.Tools
          EditorPrefs.SetInt(SaveIntervalKey, _saveInterval);
          EditorPrefs.SetString(BackupPathKey, _backupPath);
          EditorPrefs.SetInt(BackupCountKey, _backupCount);
+         EditorPrefs.SetBool(BackupPrefabKey, _backupPrefab);
       }
 
       private static void OnEnterInPlayMode(PlayModeStateChange state)
@@ -299,11 +303,64 @@ namespace PM.Tools
          }
       }
 
+      internal static void BackupModifiedPrefabs(string[] assetPaths)
+      {
+         if (!_backupPrefab)
+            return;
+
+         if (!ValidateBackupPath(_backupPath))
+         {
+            Log(2, "Prefab backup skipped due to invalid backup path.");
+            return;
+         }
+
+         var username = SystemInfo.deviceName;
+
+         // Filter for prefab files only
+         var prefabPaths = assetPaths.Where(path => path.EndsWith(".prefab")).ToArray();
+
+         if (prefabPaths.Length == 0)
+            return;
+
+         foreach (var assetPath in prefabPaths)
+         {
+            try
+            {
+               // Extract prefab name without extension
+               var prefabFileName = Path.GetFileNameWithoutExtension(assetPath);
+               var timestamp = DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss_fff");
+               var fileName = $"{prefabFileName} v.{timestamp}.prefab";
+               var path = Path.Combine("Assets", _backupPath, username, prefabFileName);
+               var filePath = Path.Combine(path, fileName);
+
+               if (!Directory.Exists(path))
+                  Directory.CreateDirectory(path);
+
+               // Copy the prefab file to backup location
+               AssetDatabase.CopyAsset(assetPath, filePath);
+               Log(0, $"Backup created for prefab '{prefabFileName}'.");
+
+               // Deferred cleanup to avoid blocking
+               EditorApplication.delayCall += () => ClearBackupFolder(path, filePath, "*.prefab");
+            }
+            catch (Exception e)
+            {
+               var prefabName = Path.GetFileNameWithoutExtension(assetPath);
+               Log(2, $"Error occurred while creating a backup for prefab '{prefabName}'.\nException: {e}");
+            }
+         }
+      }
+
       private static void ClearBackupFolder(string path, string newFilePath)
+      {
+         ClearBackupFolder(path, newFilePath, "*.unity");
+      }
+
+      private static void ClearBackupFolder(string path, string newFilePath, string filePattern)
       {
          try
          {
-            var fileInfo = new DirectoryInfo(path).GetFiles("*.unity");
+            var fileInfo = new DirectoryInfo(path).GetFiles(filePattern);
 
             if (fileInfo.Length > _backupCount)
             {
@@ -509,6 +566,12 @@ namespace PM.Tools
             GUILayout.EndHorizontal();
 
             GUILayout.Space(10);
+            GUILayout.BeginHorizontal();
+            DrawButton(ref _backupPrefab, _cachedBackup, "Create timestamped backup copies of prefabs", "Prefab Backup");
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(10);
             GUILayout.Label("Backups are saved to: Assets/<your path>/<hostname>/<scene name>/", _guiStyleLabel);
          }
 
@@ -546,6 +609,19 @@ namespace PM.Tools
          }
 
          GUILayout.EndVertical();
+      }
+   }
+
+   /// <summary>
+   /// Asset processor that intercepts save operations to backup modified prefabs
+   /// </summary>
+   public class AutoSaveAssetProcessor : UnityEditor.AssetModificationProcessor
+   {
+      static string[] OnWillSaveAssets(string[] paths)
+      {
+         // Call prefab backup for all assets being saved
+         AutoSave.BackupModifiedPrefabs(paths);
+         return paths;
       }
    }
 }
