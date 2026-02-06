@@ -290,40 +290,75 @@ namespace PM.Tools
             return false;
          }
 
-         // Normalize and check for path traversal
-         string normalized = path.Replace('\\', '/');
-
-         if (normalized.Contains(".."))
+         try
          {
-            _backupPathError = "Path traversal (..) not allowed";
-            Log(1, "Invalid backup path: Path traversal not allowed.");
+            // Check for null byte injection
+            if (path.Contains("\0"))
+            {
+               _backupPathError = "Path contains null bytes";
+               Log(1, "Invalid backup path: Path contains null bytes.");
+               return false;
+            }
+
+            // Check for invalid path characters
+            char[] invalidChars = Path.GetInvalidPathChars();
+            if (path.IndexOfAny(invalidChars) >= 0)
+            {
+               _backupPathError = "Path contains invalid characters";
+               Log(1, "Invalid backup path: Path contains invalid characters.");
+               return false;
+            }
+
+            // Check for absolute paths (drive letters or network paths)
+            if (Path.IsPathRooted(path))
+            {
+               _backupPathError = "Absolute paths not allowed";
+               Log(1, "Invalid backup path: Absolute paths are not allowed.");
+               return false;
+            }
+
+            // Check for network paths (UNC paths like \\server\share)
+            if (path.StartsWith("\\\\") || path.StartsWith("//"))
+            {
+               _backupPathError = "Network paths not allowed";
+               Log(1, "Invalid backup path: Network paths are not allowed.");
+               return false;
+            }
+
+            // Get the full path to the Assets folder
+            string assetsPath = Path.GetFullPath(Application.dataPath);
+
+            // Construct and normalize the proposed backup path
+            string proposedPath = Path.Combine(Application.dataPath, path);
+            string normalizedPath = Path.GetFullPath(proposedPath);
+
+            // Check for maximum path length
+            if (normalizedPath.Length > 260)
+            {
+               _backupPathError = "Path exceeds maximum length";
+               Log(1, "Invalid backup path: Path exceeds maximum length.");
+               return false;
+            }
+
+            // Ensure the normalized path stays within the Assets folder
+            if (!normalizedPath.StartsWith(assetsPath + Path.DirectorySeparatorChar) &&
+                !normalizedPath.Equals(assetsPath))
+            {
+               _backupPathError = "Path must be within Assets folder";
+               Log(1, "Invalid backup path: Path must be within the Assets folder.");
+               return false;
+            }
+
+            // Clear error when validation passes
+            _backupPathError = "";
+            return true;
+         }
+         catch (Exception e)
+         {
+            _backupPathError = $"Invalid path: {e.Message}";
+            Log(1, $"Invalid backup path: {e.Message}");
             return false;
          }
-
-         if (normalized.StartsWith("/"))
-         {
-            _backupPathError = "Absolute paths not allowed";
-            Log(1, "Invalid backup path: Absolute paths not allowed.");
-            return false;
-         }
-
-         if (normalized.Contains(":"))
-         {
-            _backupPathError = "Drive letters not allowed";
-            Log(1, "Invalid backup path: Drive letters not allowed.");
-            return false;
-         }
-
-         if (normalized.Contains("~"))
-         {
-            _backupPathError = "Home directory (~) not allowed";
-            Log(1, "Invalid backup path: Home directory not allowed.");
-            return false;
-         }
-
-         // Clear error when validation passes
-         _backupPathError = "";
-         return true;
       }
 
       private static void BackupActiveScene(Scene activeScene)
