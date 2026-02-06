@@ -52,12 +52,14 @@ Open the AutoSave window via menu: **Tools > ProjectMakers > AutoSave**
 
 ## Backup Organization
 
-Backups are organized by hostname and scene name:
+Backups are organized by machine identifier and scene name:
 ```
-Assets/<backup-path>/<hostname>/<scene-name>/
+Assets/<backup-path>/<machine-id>/<scene-name>/
     SceneName v.2024_01_15_14_30_00_123.unity
     SceneName v.2024_01_15_14_35_00_456.unity
 ```
+
+**Privacy Note:** Backups use a persistent machine identifier (GUID) instead of your device hostname. This prevents accidental disclosure of your machine name if backup folders are committed to version control or shared with others.
 
 ## Troubleshooting
 

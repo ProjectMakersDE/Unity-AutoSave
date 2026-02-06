@@ -28,6 +28,7 @@ namespace PM.Tools
       private const string BackupPathKey = EditorPrefPrefix + "BACKUPPATH";
       private const string BackupCountKey = EditorPrefPrefix + "BACKUPCOUNT";
       private const string BackupPrefabKey = EditorPrefPrefix + "BACKUPPREFAB";
+      private const string MachineIdentifierKey = EditorPrefPrefix + "MACHINEIDENTIFIER";
 
       private static bool _autoSave;
       private static bool _saveOnPlay;
@@ -206,6 +207,19 @@ namespace PM.Tools
          EditorPrefs.SetBool(BackupPrefabKey, _backupPrefab);
       }
 
+      private static string GetMachineIdentifier()
+      {
+         string identifier = EditorPrefs.GetString(MachineIdentifierKey, string.Empty);
+
+         if (string.IsNullOrEmpty(identifier))
+         {
+            identifier = Guid.NewGuid().ToString();
+            EditorPrefs.SetString(MachineIdentifierKey, identifier);
+         }
+
+         return identifier;
+      }
+
       private static void OnEnterInPlayMode(PlayModeStateChange state)
       {
          if (_saveOnPlay && !EditorApplication.isPlaying && EditorApplication.isPlayingOrWillChangePlaymode)
@@ -369,7 +383,7 @@ namespace PM.Tools
             return;
          }
 
-         var username = SystemInfo.deviceName;
+         var username = GetMachineIdentifier();
          var curSceneName = activeScene.name;
          var fileName = BackupFileName(curSceneName);
          var path = Path.Combine("Assets", _backupPath, username, curSceneName);
@@ -403,7 +417,7 @@ namespace PM.Tools
             return;
          }
 
-         var username = SystemInfo.deviceName;
+         var username = GetMachineIdentifier();
 
          // Filter for prefab files only
          var prefabPaths = assetPaths.Where(path => path.EndsWith(".prefab")).ToArray();
