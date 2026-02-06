@@ -41,7 +41,9 @@ namespace PM.Tools
       // Race condition prevention
       private static bool _isSaving;
 
-      private static DateTime _lastAutosave = DateTime.Now;
+      // Timer tracking - uses EditorApplication.timeSinceStartup instead of DateTime.Now
+      // for better performance (no memory allocation on each access)
+      private static double _lastAutosave;
 
       private static int _saveInterval = 5;
       private static int _saveIntervalSlider = 5;
@@ -144,7 +146,7 @@ namespace PM.Tools
          EditorApplication.update -= EditorUpdate;
          EditorApplication.playModeStateChanged -= OnEnterInPlayMode;
 
-         _lastAutosave = DateTime.Now;
+         _lastAutosave = EditorApplication.timeSinceStartup;
          EditorApplication.update += EditorUpdate;
          EditorApplication.playModeStateChanged += OnEnterInPlayMode;
          _autoSave = true;
@@ -154,10 +156,14 @@ namespace PM.Tools
 
       private static void EditorUpdate()
       {
-         if (_lastAutosave.AddMinutes(_saveInterval) > DateTime.Now) return;
+         // Use EditorApplication.timeSinceStartup instead of DateTime.Now for performance:
+         // - No memory allocation on each access (DateTime.Now creates new objects)
+         // - Lightweight double value representing seconds since Unity started
+         // - Specifically designed for Unity editor timing comparisons
+         if (EditorApplication.timeSinceStartup - _lastAutosave < _saveInterval * 60.0) return;
 
          // Always reset timer to prevent checking every frame
-         _lastAutosave = DateTime.Now;
+         _lastAutosave = EditorApplication.timeSinceStartup;
 
          for (int i = 0; i < SceneManager.sceneCount; i++)
          {
@@ -173,11 +179,11 @@ namespace PM.Tools
 
       private static TimeSpan GetTimeUntilNextSave()
       {
-         DateTime nextSaveTime = _lastAutosave.AddMinutes(_saveInterval);
-         TimeSpan timeRemaining = nextSaveTime - DateTime.Now;
+         double elapsed = EditorApplication.timeSinceStartup - _lastAutosave;
+         double remainingSeconds = (_saveInterval * 60.0) - elapsed;
 
          // Return zero if time has already passed
-         return timeRemaining.TotalSeconds > 0 ? timeRemaining : TimeSpan.Zero;
+         return remainingSeconds > 0 ? TimeSpan.FromSeconds(remainingSeconds) : TimeSpan.Zero;
       }
 
       private static void LoadSettings()
