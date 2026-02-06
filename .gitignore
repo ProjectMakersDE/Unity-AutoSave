@@ -41,5 +41,5 @@ Desktop.ini
 # Memory files
 *.mem
 
-# Auto Claude data directory
-.auto-claude/
+# AutoSave backup directory
+_project/
