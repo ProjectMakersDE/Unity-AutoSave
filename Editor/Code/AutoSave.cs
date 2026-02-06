@@ -494,7 +494,7 @@ namespace PM.Tools
             // Only refresh the specific backup folder, not entire project
             if (!string.IsNullOrEmpty(newFilePath))
             {
-               AssetDatabase.ImportAsset(newFilePath, ImportAssetOptions.ForceSynchronousImport);
+               AssetDatabase.ImportAsset(newFilePath);
             }
          }
          catch (Exception e)
