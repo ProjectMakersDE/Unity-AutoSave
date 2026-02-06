@@ -112,6 +112,21 @@ namespace PM.Tools
          _guiStyleInitialized = true;
       }
 
+      private void UpdateWindowTitle()
+      {
+         titleContent = new GUIContent(_autoSave ? "AutoSave - Enabled" : "AutoSave - Disabled");
+      }
+
+      private static void UpdateAllWindowTitles()
+      {
+         // Find all open AutoSave windows and update their titles
+         var windows = Resources.FindObjectsOfTypeAll<AutoSave>();
+         foreach (var window in windows)
+         {
+            window.UpdateWindowTitle();
+         }
+      }
+
       private static void AutosaveOff()
       {
          // Always unsubscribe first to prevent duplicates
@@ -119,6 +134,7 @@ namespace PM.Tools
          EditorApplication.playModeStateChanged -= OnEnterInPlayMode;
          _autoSave = false;
          Log(0, "OFF !");
+         UpdateAllWindowTitles();
       }
 
       private static void AutosaveOn()
@@ -132,6 +148,7 @@ namespace PM.Tools
          EditorApplication.playModeStateChanged += OnEnterInPlayMode;
          _autoSave = true;
          Log(0, "ON !");
+         UpdateAllWindowTitles();
       }
 
       private static void EditorUpdate()
@@ -543,7 +560,22 @@ namespace PM.Tools
          GUILayout.EndVertical();
          GUILayout.EndHorizontal();
          GUILayout.EndVertical();
+
+         bool previousAutoSave = _autoSave;
          DrawButton(ref _autoSave, _cachedOnOff, "Enable or disable automatic saving", "AutoSave");
+
+         // Call AutosaveOn/Off when state changes via GUI button
+         if (_autoSave != previousAutoSave)
+         {
+            if (_autoSave)
+               AutosaveOn();
+            else
+               AutosaveOff();
+
+            // Update title immediately for instant visual feedback
+            UpdateWindowTitle();
+         }
+
          GUILayout.EndHorizontal();
          GUILayout.Space(10);
          GUILayout.BeginHorizontal();
