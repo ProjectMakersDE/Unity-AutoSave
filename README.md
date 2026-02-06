@@ -59,6 +59,54 @@ Assets/<backup-path>/<hostname>/<scene-name>/
     SceneName v.2024_01_15_14_35_00_456.unity
 ```
 
+## Troubleshooting
+
+### Scenes Not Being Saved
+
+**Problem:** Changes to your scene are not being saved automatically.
+
+**Solutions:**
+- Verify that the **On/Off** toggle is enabled in the AutoSave window
+- Check that your **Save Interval** is set to a reasonable time (1-30 minutes)
+- Ensure you have an active scene open (AutoSave only works with saved scenes)
+- Check the Console for any error messages if **Debug.Log** is enabled
+
+### Backup Path Validation Errors
+
+**Problem:** Getting errors about invalid backup paths.
+
+**Solutions:**
+- The backup path must be relative to the `Assets/` folder
+- Do not include `Assets/` in the path (use `Backups` not `Assets/Backups`)
+- Avoid special characters in the path name
+- Ensure the path doesn't start with `/` or contain `..`
+- Valid example: `AutoSaveBackups` or `Backups/Scenes`
+
+### Permission Errors
+
+**Problem:** Receiving permission denied or access errors.
+
+**Solutions:**
+- Ensure Unity has write permissions to your project folder
+- Check that backup folder is not marked as read-only
+- On Windows: Run Unity as Administrator if working in protected directories
+- On macOS/Linux: Verify folder permissions with `chmod` if needed
+- Close any programs that might be locking scene files (external editors, source control tools)
+
+### Understanding When Saves Trigger
+
+AutoSave triggers in the following situations:
+
+1. **Interval-based:** Automatically after the configured time (1-30 minutes) has elapsed
+2. **Save on Play:** When enabled, saves occur before entering Play mode
+3. **Manual operations:** Regular Unity save operations (Ctrl/Cmd+S) still work independently
+
+**Note:** AutoSave only operates when:
+- The AutoSave function is enabled (On/Off toggle)
+- A scene is currently open and has been saved at least once
+
+If you continue to experience issues, please enable **Debug.Log** in the AutoSave window to see detailed information about save operations in the Console.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
