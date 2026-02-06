@@ -115,23 +115,64 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## Deutsche Beschreibung
 
-### Beschreibung
+Ein praktisches Tool zum automatischen Speichern und Sichern Ihrer Unity-Szenen.
 
-Nichts ist wichtiger als regelmäßiges Speichern. Doch es passiert schnell, dass man vergisst, die Szene vor dem Testen zu speichern. Um dem zu entgehen gibt es jetzt den AutoSave Editor.
+## Installation
 
-### Projektumfang
+### Via Package Manager (Empfohlen)
 
-Das Asset besteht aus einem C#-Skript und 9 Texturen. Getestet mit Unity 2022.3 bis Unity 6 (6000.x).
+1. Öffnen Sie Unity und gehen Sie zu `Window > Package Manager`
+2. Klicken Sie auf die `+` Schaltfläche in der oberen linken Ecke
+3. Wählen Sie `Add package from git URL...`
+4. Geben Sie ein: `https://github.com/ProjectMakers/Unity-AutoSave.git`
+5. Klicken Sie auf `Add`
 
-### Funktionen
+### Manuelle Installation
 
-- **Debug.Log:** Zeigt alle Aktionen, die von diesem Asset ausgeführt werden, im Debug.Log an.
-- **Save on play:** Speichert bei Betätigung des Playbuttons.
-- **Save Assets:** Speichert auch modifizierte Assets.
-- **Save interval:** Gibt an, nach wieviel Minuten (1 - 30) gespeichert wird.
-- **On/Off:** Schaltet die Autosave-Funktion an bzw. aus.
-- **Backup On/Off:** Schaltet die Backup-Funktion an bzw. aus.
-- **Scene Folder:** Ein Ordner wird erstellt mit dem Hostname und dem Namen der Szene.
+Klonen oder laden Sie dieses Repository in den `Packages/` Ordner Ihres Projekts:
+
+```
+IhrProjekt/
+├── Assets/
+├── Packages/
+│   └── Unity-AutoSave/    <-- Hier platzieren
+└── ProjectSettings/
+```
+
+## Kompatibilität
+
+- **Unity 2022.3 LTS** und neuer
+- **Unity 6 (6000.x)** - Vollständig kompatibel
+
+## Verwendung
+
+Öffnen Sie das AutoSave-Fenster über das Menü: **Tools > ProjectMakers > AutoSave**
+
+## Funktionen
+
+| Feature | Beschreibung |
+|---------|-------------|
+| **Debug.Log** | Aktiviert/deaktiviert die Konsolenausgabe für alle AutoSave-Aktionen |
+| **Save on Play** | Speichert automatisch vor dem Starten des Play-Modus |
+| **Save Assets** | Speichert auch modifizierte Assets (ScriptableObjects, Prefabs, etc.) |
+| **Save Interval** | Konfiguriert das automatische Speichern von 1-30 Minuten |
+| **On/Off** | Aktiviert oder deaktiviert die AutoSave-Funktion |
+| **Backup** | Erstellt zeitgestempelte Backup-Kopien von Szenen |
+| **Backup Path** | Legt fest, wo Backups gespeichert werden (relativ zu Assets/) |
+| **Backup Count** | Begrenzt die Anzahl der Backup-Dateien pro Szene |
+
+## Backup-Organisation
+
+Backups werden nach Hostname und Szenenname organisiert:
+```
+Assets/<backup-path>/<hostname>/<scene-name>/
+    SceneName v.2024_01_15_14_30_00_123.unity
+    SceneName v.2024_01_15_14_35_00_456.unity
+```
+
+## Changelog
+
+Siehe [CHANGELOG.md](CHANGELOG.md) für die Versionshistorie.
 
 ---
 
