@@ -41,6 +41,9 @@ namespace PM.Tools
       // Race condition prevention
       private static bool _isSaving;
 
+      // Cached dirty state to avoid repeated SceneManager iterations
+      private static bool _hasAnyDirtyScene;
+
       // Timer tracking - uses EditorApplication.timeSinceStartup instead of DateTime.Now
       // for better performance (no memory allocation on each access)
       private static double _lastAutosave;
@@ -135,6 +138,8 @@ namespace PM.Tools
          // Always unsubscribe first to prevent duplicates
          EditorApplication.update -= EditorUpdate;
          EditorApplication.playModeStateChanged -= OnEnterInPlayMode;
+         EditorSceneManager.sceneDirtied -= OnSceneDirtied;
+         EditorSceneManager.sceneSaved -= OnSceneSaved;
          _autoSave = false;
          Log(0, "OFF !");
          UpdateAllWindowTitles();
@@ -145,13 +150,36 @@ namespace PM.Tools
          // Unsubscribe first to prevent duplicate registrations
          EditorApplication.update -= EditorUpdate;
          EditorApplication.playModeStateChanged -= OnEnterInPlayMode;
+         EditorSceneManager.sceneDirtied -= OnSceneDirtied;
+         EditorSceneManager.sceneSaved -= OnSceneSaved;
 
          _lastAutosave = EditorApplication.timeSinceStartup;
          EditorApplication.update += EditorUpdate;
          EditorApplication.playModeStateChanged += OnEnterInPlayMode;
+         EditorSceneManager.sceneDirtied += OnSceneDirtied;
+         EditorSceneManager.sceneSaved += OnSceneSaved;
          _autoSave = true;
          Log(0, "ON !");
          UpdateAllWindowTitles();
+      }
+
+      private static void OnSceneDirtied(Scene scene)
+      {
+         _hasAnyDirtyScene = true;
+      }
+
+      private static void OnSceneSaved(Scene scene)
+      {
+         // Check if any scenes are still dirty after this save
+         _hasAnyDirtyScene = false;
+         for (int i = 0; i < SceneManager.sceneCount; i++)
+         {
+            if (SceneManager.GetSceneAt(i).isDirty)
+            {
+               _hasAnyDirtyScene = true;
+               break;
+            }
+         }
       }
 
       private static void EditorUpdate()
@@ -165,15 +193,10 @@ namespace PM.Tools
          // Always reset timer to prevent checking every frame
          _lastAutosave = EditorApplication.timeSinceStartup;
 
-         for (int i = 0; i < SceneManager.sceneCount; i++)
+         if (_hasAnyDirtyScene)
          {
-            var scene = SceneManager.GetSceneAt(i);
-
-            if (scene.isDirty)
-            {
-               Save();
-               break;
-            }
+            Save();
+            _hasAnyDirtyScene = false;
          }
       }
 
