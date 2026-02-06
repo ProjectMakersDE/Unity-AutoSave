@@ -40,3 +40,6 @@ Desktop.ini
 
 # Memory files
 *.mem
+
+# Auto Claude data directory
+.auto-claude/

@@ -150,6 +150,15 @@ namespace PM.Tools
          }
       }
 
+      private static TimeSpan GetTimeUntilNextSave()
+      {
+         DateTime nextSaveTime = _lastAutosave.AddMinutes(_saveInterval);
+         TimeSpan timeRemaining = nextSaveTime - DateTime.Now;
+
+         // Return zero if time has already passed
+         return timeRemaining.TotalSeconds > 0 ? timeRemaining : TimeSpan.Zero;
+      }
+
       private static void LoadSettings()
       {
          _autoSave = EditorPrefs.GetBool(AutoSaveKey, true);
@@ -471,6 +480,17 @@ namespace PM.Tools
              EditorApplication.timeSinceStartup - _statusDisplayTime < StatusDisplayDuration)
          {
             EditorGUILayout.HelpBox(_lastSaveStatus, MessageType.Info);
+         }
+
+         // Countdown timer display
+         if (_autoSave)
+         {
+            TimeSpan timeRemaining = GetTimeUntilNextSave();
+            int minutes = (int)timeRemaining.TotalMinutes;
+            int seconds = timeRemaining.Seconds;
+            string countdownText = $"Next autosave in: {minutes:D2}:{seconds:D2}";
+            EditorGUILayout.HelpBox(countdownText, MessageType.None);
+            Repaint();
          }
 
          GUILayout.Space(10);
