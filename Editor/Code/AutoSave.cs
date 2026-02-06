@@ -67,6 +67,9 @@ namespace PM.Tools
       private static double _statusDisplayTime;
       private const double StatusDisplayDuration = 3.0;
 
+      // Backup path validation
+      private static string _backupPathError = "";
+
       private string TexturePath
       {
          get
@@ -265,19 +268,44 @@ namespace PM.Tools
       {
          // Prevent path traversal attacks
          if (string.IsNullOrWhiteSpace(path))
-            return false;
-
-         // Normalize and check for path traversal
-         string normalized = path.Replace('\\', '/');
-         if (normalized.Contains("..") ||
-             normalized.StartsWith("/") ||
-             normalized.Contains(":") ||
-             normalized.Contains("~"))
          {
-            Log(1, "Invalid backup path: Path traversal or absolute paths not allowed.");
+            _backupPathError = "Backup path cannot be empty";
             return false;
          }
 
+         // Normalize and check for path traversal
+         string normalized = path.Replace('\\', '/');
+
+         if (normalized.Contains(".."))
+         {
+            _backupPathError = "Path traversal (..) not allowed";
+            Log(1, "Invalid backup path: Path traversal not allowed.");
+            return false;
+         }
+
+         if (normalized.StartsWith("/"))
+         {
+            _backupPathError = "Absolute paths not allowed";
+            Log(1, "Invalid backup path: Absolute paths not allowed.");
+            return false;
+         }
+
+         if (normalized.Contains(":"))
+         {
+            _backupPathError = "Drive letters not allowed";
+            Log(1, "Invalid backup path: Drive letters not allowed.");
+            return false;
+         }
+
+         if (normalized.Contains("~"))
+         {
+            _backupPathError = "Home directory (~) not allowed";
+            Log(1, "Invalid backup path: Home directory not allowed.");
+            return false;
+         }
+
+         // Clear error when validation passes
+         _backupPathError = "";
          return true;
       }
 
@@ -563,6 +591,12 @@ namespace PM.Tools
             }
 
             GUILayout.EndHorizontal();
+
+            // Display inline validation error if present
+            if (!string.IsNullOrEmpty(_backupPathError))
+            {
+               EditorGUILayout.HelpBox(_backupPathError, MessageType.Error);
+            }
             GUILayout.EndVertical();
             GUILayout.BeginVertical();
             GUILayout.Space(24);
