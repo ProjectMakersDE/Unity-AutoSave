@@ -184,7 +184,7 @@ namespace PM.Tools
          _autoSave = EditorPrefs.GetBool(AutoSaveKey, true);
          _saveOnPlay = EditorPrefs.GetBool(SaveOnPlayKey, true);
          _saveAssets = EditorPrefs.GetBool(SaveAssetsKey, true);
-         _debugLog = EditorPrefs.GetBool(DebugLogKey, true);
+         _debugLog = EditorPrefs.GetBool(DebugLogKey, false);
          _saveInterval = EditorPrefs.GetInt(SaveIntervalKey, 2);
          _saveIntervalSlider = EditorPrefs.GetInt(SaveIntervalKey, 2);
          _backup = EditorPrefs.GetBool(BackupKey, true);
