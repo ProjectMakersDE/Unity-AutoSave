@@ -9,6 +9,7 @@
 logs/security/
 **/auto-claude/
 **/.claude/
+CLAUDE.md
 
 # Unity generated
 [Ll]ibrary/

@@ -679,17 +679,32 @@ namespace PM.Tools
 
          if (_showBackup)
          {
+            GUILayout.Space(5);
             GUILayout.BeginHorizontal();
-            DrawButton(ref _backup, _cachedBackup, "Create timestamped backup copies of scenes", "Backup");
+
             GUILayout.BeginVertical();
-            GUILayout.Space(24);
+            DrawButton(ref _backup, _cachedBackup, "Create timestamped backup copies of scenes", "Backup");
+            GUILayout.Label("Scene", _guiStyleLabel);
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
+
+            GUILayout.BeginVertical();
+            DrawButton(ref _backupPrefab, _cachedBackup, "Create timestamped backup copies of prefabs", "Prefab Backup");
+            GUILayout.Label("Prefab", _guiStyleLabel);
+            GUILayout.EndVertical();
+
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(5);
             GUILayout.BeginHorizontal();
             GUILayout.Space(10);
 
             EditorGUIUtility.labelWidth = 115;
             string newBackupPath = EditorGUILayout.TextField(
                new GUIContent("Backup save path:", "Relative path inside Assets/ folder (e.g., '_project/AutoSave')"),
-               _backupPath);
+               _backupPath, GUILayout.ExpandWidth(true));
 
             // Validate and update backup path
             if (newBackupPath != _backupPath)
@@ -700,6 +715,7 @@ namespace PM.Tools
                }
             }
 
+            GUILayout.Space(10);
             GUILayout.EndHorizontal();
 
             // Display inline validation error if present
@@ -707,9 +723,8 @@ namespace PM.Tools
             {
                EditorGUILayout.HelpBox(_backupPathError, MessageType.Error);
             }
-            GUILayout.EndVertical();
-            GUILayout.BeginVertical();
-            GUILayout.Space(24);
+
+            GUILayout.Space(5);
             GUILayout.BeginHorizontal();
             GUILayout.Space(10);
 
@@ -724,14 +739,6 @@ namespace PM.Tools
                _backupCount = Mathf.Clamp(newBackupCount, 1, 100);
             }
 
-            GUILayout.EndHorizontal();
-            GUILayout.EndVertical();
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(10);
-            GUILayout.BeginHorizontal();
-            DrawButton(ref _backupPrefab, _cachedBackup, "Create timestamped backup copies of prefabs", "Prefab Backup");
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
 

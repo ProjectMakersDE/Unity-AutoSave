@@ -4,6 +4,16 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-02-07
+
+### Changed
+- Backup settings UI: Scene and Prefab backup toggles now show distinct labels
+- Backup path input field auto-sizes to full window width
+
+### Fixed
+- Two identical-looking backup enable buttons now clearly labeled "Scene" and "Prefab"
+- Added missing CONTRIBUTING.md.meta file to resolve Unity import error
+
 ## [1.7.0] - 2026-02-05
 
 ### Added
