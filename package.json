@@ -1,6 +1,6 @@
 {
   "name": "com.projectmakers.pmautosave",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "displayName": "PM_AutoSave",
   "description": "Automatic scene and asset saving for Unity Editor. Prevents work loss with configurable intervals, save-on-play, and backup management. Supports multiple scenes and organizes backups by hostname.",
   "unity": "2022.3",

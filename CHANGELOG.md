@@ -4,6 +4,14 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.7.2] - 2026-02-07
+
+### Fixed
+- Fatal error when creating new prefabs ("Copying failed" at AssetDatabase.CopyAsset)
+- Prefab backup now deferred until after Unity's save pipeline completes, preventing reentrancy conflicts
+- Added file existence check before prefab backup to handle newly created prefabs
+- Replaced AssetDatabase.CopyAsset with File.Copy to avoid triggering additional AssetDatabase operations during save
+
 ## [1.7.1] - 2026-02-07
 
 ### Changed

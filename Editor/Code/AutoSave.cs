@@ -465,11 +465,19 @@ namespace PM.Tools
                var path = Path.Combine("Assets", _backupPath, username, prefabFileName);
                var filePath = Path.Combine(path, fileName);
 
+               // Skip if source prefab doesn't exist (e.g. newly created and not yet on disk)
+               if (!File.Exists(assetPath))
+               {
+                  Log(1, $"Prefab '{prefabFileName}' not found on disk, skipping backup.");
+                  continue;
+               }
+
                if (!Directory.Exists(path))
                   Directory.CreateDirectory(path);
 
-               // Copy the prefab file to backup location
-               AssetDatabase.CopyAsset(assetPath, filePath);
+               // Use File.Copy instead of AssetDatabase.CopyAsset to avoid
+               // triggering additional AssetDatabase operations
+               File.Copy(assetPath, filePath, true);
                Log(0, $"Backup created for prefab '{prefabFileName}'.");
 
                // Deferred cleanup to avoid blocking
@@ -790,8 +798,12 @@ namespace PM.Tools
    {
       static string[] OnWillSaveAssets(string[] paths)
       {
-         // Call prefab backup for all assets being saved
-         AutoSave.BackupModifiedPrefabs(paths);
+         // Defer prefab backup until after the save completes.
+         // Calling AssetDatabase.CopyAsset during OnWillSaveAssets causes errors
+         // because the asset may not exist yet (new prefabs) or the AssetDatabase
+         // is mid-operation (reentrancy).
+         var pathsCopy = (string[])paths.Clone();
+         EditorApplication.delayCall += () => AutoSave.BackupModifiedPrefabs(pathsCopy);
          return paths;
       }
    }
