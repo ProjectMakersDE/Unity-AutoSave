@@ -415,7 +415,7 @@ namespace PM.Tools
          var username = GetMachineIdentifier();
          var curSceneName = activeScene.name;
          var fileName = BackupFileName(curSceneName);
-         var path = Path.Combine("Assets", _backupPath, username, curSceneName);
+         var path = Path.Combine("Assets", _backupPath, username, "Scenes", curSceneName);
          var filePath = Path.Combine(path, fileName);
 
          if (!Directory.Exists(path))
@@ -462,7 +462,7 @@ namespace PM.Tools
                var prefabFileName = Path.GetFileNameWithoutExtension(assetPath);
                var timestamp = DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss_fff");
                var fileName = $"{prefabFileName} v.{timestamp}.prefab";
-               var path = Path.Combine("Assets", _backupPath, username, prefabFileName);
+               var path = Path.Combine("Assets", _backupPath, username, "Prefabs", prefabFileName);
                var filePath = Path.Combine(path, fileName);
 
                // Skip if source prefab doesn't exist (e.g. newly created and not yet on disk)
@@ -751,7 +751,7 @@ namespace PM.Tools
             GUILayout.EndHorizontal();
 
             GUILayout.Space(10);
-            GUILayout.Label("Backups are saved to: Assets/<your path>/<hostname>/<scene name>/", _guiStyleLabel);
+            GUILayout.Label("Backups are saved to: Assets/<your path>/<hostname>/(Scenes|Prefabs)/<name>/", _guiStyleLabel);
          }
 
          GUILayout.Space(10);
