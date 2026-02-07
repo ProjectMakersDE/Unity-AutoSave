@@ -4,7 +4,7 @@
 [![Unity 2022.3+](https://img.shields.io/badge/Unity-2022.3%2B-blue.svg)](https://unity.com/)
 [![Unity 6](https://img.shields.io/badge/Unity%206-6000.x-blue.svg)](https://unity.com/)
 
-A handy tool to automatically save and backup your Unity scenes.
+A handy tool to automatically save and backup your Unity scenes and prefabs.
 
 ## Installation
 
@@ -47,16 +47,21 @@ Open the AutoSave window via menu: **Tools > ProjectMakers > AutoSave**
 | **Save Interval** | Configure auto-save timing from 1-30 minutes |
 | **On/Off** | Enable or disable the AutoSave function |
 | **Backup** | Create timestamped backup copies of scenes |
+| **Prefab Backup** | Create timestamped backup copies of prefabs |
 | **Backup Path** | Customize where backups are stored (relative to Assets/) |
-| **Backup Count** | Limit the number of backup files per scene |
+| **Backup Count** | Limit the number of backup files per scene/prefab |
 
 ## Backup Organization
 
-Backups are organized by machine identifier and scene name:
+Backups are organized by machine identifier, type, and name:
 ```
-Assets/<backup-path>/<machine-id>/<scene-name>/
-    SceneName v.2024_01_15_14_30_00_123.unity
-    SceneName v.2024_01_15_14_35_00_456.unity
+Assets/<backup-path>/<machine-id>/
+    Scenes/<scene-name>/
+        SceneName v.2024_01_15_14_30_00_123.unity
+        SceneName v.2024_01_15_14_35_00_456.unity
+    Prefabs/<prefab-name>/
+        PrefabName v.2024_01_15_14_30_00_123.prefab
+        PrefabName v.2024_01_15_14_35_00_456.prefab
 ```
 
 **Privacy Note:** Backups use a persistent machine identifier (GUID) instead of your device hostname. This prevents accidental disclosure of your machine name if backup folders are committed to version control or shared with others.
@@ -117,7 +122,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## Deutsche Beschreibung
 
-Ein praktisches Tool zum automatischen Speichern und Sichern Ihrer Unity-Szenen.
+Ein praktisches Tool zum automatischen Speichern und Sichern Ihrer Unity-Szenen und Prefabs.
 
 ## Installation
 
@@ -160,16 +165,21 @@ IhrProjekt/
 | **Save Interval** | Konfiguriert das automatische Speichern von 1-30 Minuten |
 | **On/Off** | Aktiviert oder deaktiviert die AutoSave-Funktion |
 | **Backup** | Erstellt zeitgestempelte Backup-Kopien von Szenen |
+| **Prefab Backup** | Erstellt zeitgestempelte Backup-Kopien von Prefabs |
 | **Backup Path** | Legt fest, wo Backups gespeichert werden (relativ zu Assets/) |
-| **Backup Count** | Begrenzt die Anzahl der Backup-Dateien pro Szene |
+| **Backup Count** | Begrenzt die Anzahl der Backup-Dateien pro Szene/Prefab |
 
 ## Backup-Organisation
 
-Backups werden nach Hostname und Szenenname organisiert:
+Backups werden nach Maschinenkennung, Typ und Name organisiert:
 ```
-Assets/<backup-path>/<hostname>/<scene-name>/
-    SceneName v.2024_01_15_14_30_00_123.unity
-    SceneName v.2024_01_15_14_35_00_456.unity
+Assets/<backup-path>/<machine-id>/
+    Scenes/<scene-name>/
+        SceneName v.2024_01_15_14_30_00_123.unity
+        SceneName v.2024_01_15_14_35_00_456.unity
+    Prefabs/<prefab-name>/
+        PrefabName v.2024_01_15_14_30_00_123.prefab
+        PrefabName v.2024_01_15_14_35_00_456.prefab
 ```
 
 ## Changelog
