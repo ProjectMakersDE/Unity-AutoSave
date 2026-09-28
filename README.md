@@ -13,7 +13,7 @@ A handy tool to automatically save and backup your Unity scenes and prefabs.
 1. Open Unity and go to `Window > Package Manager`
 2. Click the `+` button in the top-left corner
 3. Select `Add package from git URL...`
-4. Enter: `https://github.com/ProjectMakers/Unity-AutoSave.git`
+4. Enter: `https://github.com/ProjectMakersDE/Unity-AutoSave.git`
 5. Click `Add`
 
 ### Manual Installation
@@ -131,7 +131,7 @@ Ein praktisches Tool zum automatischen Speichern und Sichern Ihrer Unity-Szenen 
 1. Öffnen Sie Unity und gehen Sie zu `Window > Package Manager`
 2. Klicken Sie auf die `+` Schaltfläche in der oberen linken Ecke
 3. Wählen Sie `Add package from git URL...`
-4. Geben Sie ein: `https://github.com/ProjectMakers/Unity-AutoSave.git`
+4. Geben Sie ein: `https://github.com/ProjectMakersDE/Unity-AutoSave.git`
 5. Klicken Sie auf `Add`
 
 ### Manuelle Installation
