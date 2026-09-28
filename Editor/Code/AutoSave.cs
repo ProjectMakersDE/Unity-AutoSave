@@ -751,7 +751,7 @@ namespace PM.Tools
             GUILayout.EndHorizontal();
 
             GUILayout.Space(10);
-            GUILayout.Label("Backups are saved to: Assets/<your path>/<hostname>/(Scenes|Prefabs)/<name>/", _guiStyleLabel);
+            GUILayout.Label("Backups are saved to: Assets/<your path>/<machine-id>/(Scenes|Prefabs)/<name>/", _guiStyleLabel);
          }
 
          GUILayout.Space(10);
